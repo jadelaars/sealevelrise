@@ -59,8 +59,8 @@ def reset(layer):
         for haz in scenarios:
                 arcpy.CalculateField_management(layer,haz,"0")
 
-#poly tool tested and complete as of 2015-07-22
-#... however still need to clean up code so it doesn't clip/count 'uncertain' features in RT or CF
+#poly tool tested as of 2015-08-03
+#To Do: merge all original (even those not impacted) features to resulting file
 def poly(layer,scen):
         
         dump_dir = "C:\\Users\\jadelaars\\Desktop\\SLR\\Analysis\\dump_dir"
@@ -80,6 +80,9 @@ def poly(layer,scen):
                 outfile = dump_dir+'\\'+sc+"_clp.shp"
                 outfilemp = dump_dir+'\\'+sc+"_mp.shp"
                 outfilelyr = dump_dir+'\\'+sc+"_lyr.shp"
+                if 'RT' in sc or 'CF' in sc:
+                        print "RT or CF"
+                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
                 print 'Start Clip'
                 arcpy.Clip_analysis(layer,sce, outfile)
                 del_list.append(outfile)
@@ -93,41 +96,13 @@ def poly(layer,scen):
                 if result>0:
                         print 'Number of features: ',result
                         union_list.append(outfilemp)
-
                         print 'Add Field'
-                        arcpy.AddField_management(outfilelyr,sc,'TEXT')
+                        arcpy.AddField_management(outfilelyr,sc,'SHORT')
                         print 'Calculate Field'
-                        arcpy.CalculateField_management(outfilelyr,sc,'"1"')
+                        arcpy.CalculateField_management(outfilelyr,sc,1)
                         arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
                         arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-                        if 'RT' in sc or 'CF' in sc:
-                                print "RT or CF"
-                                arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
-                                arcpy.SelectLayerByLocation_management(outfilelyr,'HAVE_THEIR_CENTER_IN',sce)
-                                print 'Calculate with 1c'
-                                val = arcpy.GetCount_management(outfilelyr)
-                                print 'Calculating: ',val
-                                arcpy.CalculateField_management(outfilelyr,sc,'"1c"')
-                                arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
-                                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-##
-##                                arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'partial' """)
-##                                arcpy.SelectLayerByLocation_management(outfilelyr,'HAVE_THEIR_CENTER_IN',sce)
-##                                print 'Calculate with 1p'
-##                                val = arcpy.GetCount_management(outfilelyr)
-##                                print 'Calculating: ',val
-##                                arcpy.CalculateField_management(outfilelyr,sc,'"1p"')
-##                                arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
-##                                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-##                                
-##                                arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'uncertain' """)
-##                                arcpy.SelectLayerByLocation_management(outfilelyr,'HAVE_THEIR_CENTER_IN',sce)
-##                                print 'Calculate with 1u'
-##                                val = arcpy.GetCount_management(outfilelyr)
-##                                print 'Calculating: ',val
-##                                arcpy.CalculateField_management(outfilelyr,sc,'"1u"')
-##                                arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
-##                                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
+
                 else:
                         field_list.append(sc)
                                 
@@ -143,7 +118,7 @@ def poly(layer,scen):
                         arcpy.DeleteField_management(dump_dir+'\\union.shp',field.name)
         
         for i in field_list:
-                arcpy.AddField_management(dump_dir+'\\union.shp',i,'TEXT')
+                arcpy.AddField_management(dump_dir+'\\union.shp',i,'SHORT')
                        
         print 'Joining Tables'
         arcpy.SpatialJoin_analysis(target_features=dump_dir+'\\union.shp',
@@ -161,7 +136,7 @@ def poly(layer,scen):
 
 
 #incomplete, still working out the bugs as of 2015-07-23
-#... however still need to clean up code so it doesn't clip/count 'uncertain' features in RT or CF
+
 def line(layer,scen):
         
         dump_dir = "C:\\Users\\jadelaars\\Desktop\\SLR\\Analysis\\dump_dir"
@@ -180,6 +155,9 @@ def line(layer,scen):
                 outfile = dump_dir+'\\'+sc+"_clp.shp"
                 outfilemp = dump_dir+'\\'+sc+"_mp.shp"
                 outfilelyr = dump_dir+'\\'+sc+"_lyr.shp"
+                if 'RT' in sc or 'CF' in sc:
+                        print "RT or CF"
+                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
                 print 'Start Clip'
                 arcpy.Clip_analysis(layer,sce, outfile)
                 print 'Explode'
@@ -190,41 +168,13 @@ def line(layer,scen):
                 if result>0:
                         print 'Number of features: ',result
                         union_list.append(outfilemp)
-
                         print 'Add Field'
-                        arcpy.AddField_management(outfilelyr,sc,'TEXT')
+                        arcpy.AddField_management(outfilelyr,sc,'SHORT')
                         print 'Calculate Field'
-                        arcpy.CalculateField_management(outfilelyr,sc,'"1"')
+                        arcpy.CalculateField_management(outfilelyr,sc,1)
                         arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
                         arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-                        if 'RT' in sc or 'CF' in sc:
-                                print "RT or CF"
-                                arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
-                                arcpy.SelectLayerByLocation_management(outfilelyr,'HAVE_THEIR_CENTER_IN',sce)
-                                print 'Calculate with 1c'
-                                val = arcpy.GetCount_management(outfilelyr)
-                                print 'Calculating: ',val
-                                arcpy.CalculateField_management(outfilelyr,sc,'"1c"')
-                                arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
-                                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-
-##                                arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'partial' """)
-##                                arcpy.SelectLayerByLocation_management(outfilelyr,'HAVE_THEIR_CENTER_IN',sce)
-##                                print 'Calculate with 1p'
-##                                val = arcpy.GetCount_management(outfilelyr)
-##                                print 'Calculating: ',val
-##                                arcpy.CalculateField_management(outfilelyr,sc,'"1p"')
-##                                arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
-##                                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-##                                
-##                                arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'uncertain' """)
-##                                arcpy.SelectLayerByLocation_management(outfilelyr,'HAVE_THEIR_CENTER_IN',sce)
-##                                print 'Calculate with 1u'
-##                                val = arcpy.GetCount_management(outfilelyr)
-##                                print 'Calculating: ',val
-##                                arcpy.CalculateField_management(outfilelyr,sc,'"1u"')
-##                                arcpy.SelectLayerByAttribute_management(outfilelyr, "CLEAR_SELECTION")
-##                                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
+                        
                 else:
                         field_list.append(sc)
                 
@@ -245,7 +195,7 @@ def line(layer,scen):
         arcpy.CreateFolder_management("C:\\Users\\jadelaars\\Desktop\\SLR\\Analysis",'dump_dir')
         print 'All DONE!!!'
 
-#point tool tested and complete as of 2015-07-15      
+#point tool tested and complete as of 2015-08-03     
 def point(layer,scen):
         
         dump_dir = "C:\\Users\\jadelaars\\Desktop\\SLR\\Analysis\\dump_dir"
@@ -265,45 +215,20 @@ def point(layer,scen):
                 
                 
                 print 'Add Field'
-                arcpy.AddField_management(lyr,sc,'TEXT')
+                arcpy.AddField_management(lyr,sc,'SHORT')
+                if 'RT' in sc or 'CF' in sc:
+                        print "RT or CF"
+                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
+                        print 'Calculating: ',val
                 arcpy.SelectLayerByLocation_management(lyr,'INTERSECT',sce)
                 print 'Calculate Field'
                 val = arcpy.GetCount_management(lyr)
                 print 'Calculating: ',val
-                arcpy.CalculateField_management(lyr,sc,'"1"')
+                arcpy.CalculateField_management(lyr,sc,1)
                 arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
                 arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-                if 'RT' in sc or 'CF' in sc:
-                        print "RT or CF"
-                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
-                        arcpy.SelectLayerByLocation_management(lyr,'INTERSECT',sce)
-                        print 'Calculate with 1c'
-                        val = arcpy.GetCount_management(lyr)
-                        print 'Calculating: ',val
-                        arcpy.CalculateField_management(lyr,sc,'"1c"')
-                        arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
-                        arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-##
-##                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'partial' """)
-##                        arcpy.SelectLayerByLocation_management(lyr,'INTERSECT',sce)
-##                        print 'Calculate with 1p'
-##                        val = arcpy.GetCount_management(lyr)
-##                        print 'Calculating: ',val
-##                        arcpy.CalculateField_management(lyr,sc,'"1p"')
-##                        arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
-##                        arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-##                        
-##                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'uncertain' """)
-##                        arcpy.SelectLayerByLocation_management(lyr,'INTERSECT',sce)
-##                        print 'Calculate with 1u'
-##                        val = arcpy.GetCount_management(lyr)
-##                        print 'Calculating: ',val
-##                        arcpy.CalculateField_management(lyr,sc,'"1u"')
-##                        arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
-##                        arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
-##                        
-##                arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
-##                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
+
+
         
 
         
