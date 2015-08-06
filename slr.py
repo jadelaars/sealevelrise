@@ -73,6 +73,12 @@ def poly(layer,scen):
         union_list=[]
         field_list=[]
         del_list=[]
+        arcpy.CopyFeatures_management(layer,dump_dir+'\\temp.shp')
+        print 'Deleting unnecessary fields'
+        fieldList = arcpy.ListFields(dump_dir+'\\temp.shp')
+        for field in fieldList[3:]:
+                if field.name not in scen:
+                        arcpy.DeleteField_management(dump_dir+'\\temp.shp',field.name)
         for sce in scen:
                 
                 sc = str(sce).split("\\")[1]
@@ -80,11 +86,12 @@ def poly(layer,scen):
                 outfile = dump_dir+'\\'+sc+"_clp.shp"
                 outfilemp = dump_dir+'\\'+sc+"_mp.shp"
                 outfilelyr = dump_dir+'\\'+sc+"_lyr.shp"
+                
                 if 'RT' in sc or 'CF' in sc:
                         print "RT or CF"
                         arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
                 print 'Start Clip'
-                arcpy.Clip_analysis(layer,sce, outfile)
+                arcpy.Clip_analysis(dump_dir+'\\temp.shp',sce, outfile)
                 del_list.append(outfile)
                 print 'Explode'
                 arcpy.MultipartToSinglepart_management(outfile,outfilemp)
@@ -123,14 +130,18 @@ def poly(layer,scen):
         print 'Joining Tables'
         arcpy.SpatialJoin_analysis(target_features=dump_dir+'\\union.shp',
                                    join_features=layer,
-                                   out_feature_class=results_dir+'\\'+layerS+'.shp',
+                                   out_feature_class=results_shp,
                                    join_operation="JOIN_ONE_TO_ONE",
                                    join_type="KEEP_ALL",
                                    match_option="HAVE_THEIR_CENTER_IN")
+
+        arcpy.AddField_management(results_shp,'area_ac','DOUBLE')
+        arcpy.CalculateField_management(results_shp,'area_ac','!shape.area@ACRES!','PYTHON_9.3')
         print 'Delete temp files'
         for f in del_list:
                 arcpy.Delete_management(f)
         arcpy.Delete_management(dump_dir+'\\union.shp')
+        arcpy.Delete_management(dump_dir+'\\temp.shp')
 
         print 'All DONE!!!'
 
@@ -148,6 +159,7 @@ def line(layer,scen):
         print results_shp
         union_list=[]
         field_list=[]
+        del_list = []
         for sce in scen:
                 
                 sc = str(sce).split("\\")[1]
@@ -160,8 +172,10 @@ def line(layer,scen):
                         arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
                 print 'Start Clip'
                 arcpy.Clip_analysis(layer,sce, outfile)
+                del_list.append(outfile)
                 print 'Explode'
                 arcpy.MultipartToSinglepart_management(outfile,outfilemp)
+                del_list.append(outfilemp)
                 print 'Make Feature Layer'
                 arcpy.MakeFeatureLayer_management(outfilemp,outfilelyr)
                 result = arcpy.GetCount_management(outfilemp)
@@ -180,19 +194,21 @@ def line(layer,scen):
                 
                
                         
-        print 'UNION: saved to: '+dump_dir
+        print 'MERGE: saved to: '+dump_dir
         arcpy.env.extent = "MAXOF"
-        arcpy.Merge_management(union_list,dump_dir+'\\merge.shp','ALL')
+        arcpy.Merge_management(union_list,results_shp,'ALL')
 
         for i in field_list:
-                arcpy.AddField_management(dump_dir+'\\merge.shp',i,'TEXT')
+                arcpy.AddField_management(results_shp,i,'SHORT')
 
-        print 'Joining Tables'
-        arcpy.SpatialJoin_analysis(dump_dir+'\\merge.shp',layer,results_shp,"JOIN_ONE_TO_ONE","KEEP_ALL","SHARE_A_LINE_SEGMENT_WITH")                
-        print 'Delete dump folder'
-        arcpy.Delete_management(dump_dir)
-        print 'Create new dump folder'
-        arcpy.CreateFolder_management("C:\\Users\\jadelaars\\Desktop\\SLR\\Analysis",'dump_dir')
+        arcpy.AddField_management(results_shp,'len_ft','DOUBLE')
+        arcpy.CalculateField_management(results_shp,'len_ft','!shape.length@FEET!','PYTHON_9.3')
+        
+        print 'Delete temp files'
+        for f in del_list:
+                arcpy.Delete_management(f)
+        arcpy.Delete_management(dump_dir+'\\CN_2010_clp.shp')
+        arcpy.Delete_management(dump_dir+'\\CN_2010_mp.shp')
         print 'All DONE!!!'
 
 #point tool tested and complete as of 2015-08-03     
@@ -207,26 +223,33 @@ def point(layer,scen):
         print 'Copy Feature: '+layerS
         arcpy.CopyFeatures_management(layer,results_shp)
         arcpy.MakeFeatureLayer_management(results_shp,lyr)
+        del_list=[]
         
         for sce in scen:
                 sc = str(sce).split("\\")[1]
                 print sc
                 print sce
-                
+                sc_lyr = dump_dir + '\\'+ sc +'_lyr.shp'
+                arcpy.MakeFeatureLayer_management(sce,sc_lyr)
+                del_list.append(sc_lyr)
                 
                 print 'Add Field'
                 arcpy.AddField_management(lyr,sc,'SHORT')
                 if 'RT' in sc or 'CF' in sc:
                         print "RT or CF"
-                        arcpy.SelectLayerByAttribute_management(sce,"NEW_SELECTION",""" "Connect2" = 'connected' """)
+                        query = """ "Connect2" = 'connected' """
+                        arcpy.SelectLayerByAttribute_management(sc_lyr,"NEW_SELECTION",query)
                         print 'Calculating: ',val
-                arcpy.SelectLayerByLocation_management(lyr,'INTERSECT',sce)
+                arcpy.SelectLayerByLocation_management(lyr,'INTERSECT',sc_lyr,selection_type='NEW_SELECTION')
                 print 'Calculate Field'
                 val = arcpy.GetCount_management(lyr)
                 print 'Calculating: ',val
                 arcpy.CalculateField_management(lyr,sc,1)
                 arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
-                arcpy.SelectLayerByAttribute_management(sce, "CLEAR_SELECTION")
+                arcpy.SelectLayerByAttribute_management(sc_lyr, "CLEAR_SELECTION")
+
+        for i in del_list:
+                arcpy.Delete_management(i)
 
 
         
